@@ -14,6 +14,7 @@ import miumg.edu.gt.CITAS_MEDICAS.web.dto.response.CitaResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -50,16 +51,32 @@ public class CitaController {
 
     // READ - Obtener por ID
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<CitaResponse> obtenerPorId(@PathVariable Integer id) {
         Cita cita = citaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Cita no encontrada"));
+        
+        // Forzar carga de relaciones lazy
+        cita.getPaciente().getUsuario().getNombre();
+        cita.getMedico().getUsuario().getNombre();
+        cita.getHorario().getHoraInicio();
+        
         return ResponseEntity.ok(convertirACitaResponse(cita));
     }
 
     // READ - Listar todas
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<List<CitaResponse>> listarTodas() {
         List<Cita> citas = citaRepository.findAll();
+        
+        // Forzar carga de relaciones lazy
+        citas.forEach(c -> {
+            c.getPaciente().getUsuario().getNombre();
+            c.getMedico().getUsuario().getNombre();
+            c.getHorario().getHoraInicio();
+        });
+        
         List<CitaResponse> response = citas.stream()
                 .map(this::convertirACitaResponse)
                 .collect(Collectors.toList());
@@ -68,11 +85,18 @@ public class CitaController {
 
     // READ - Listar por médico (TODAS las citas del médico)
     @GetMapping("/medico/{idMedico}")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<CitaResponse>> listarPorMedico(@PathVariable Integer idMedico) {
-        // Obtener TODAS las citas del médico (sin filtro de fecha)
         List<Cita> citas = citaRepository.findAll().stream()
                 .filter(c -> c.getMedico().getId().equals(idMedico))
                 .collect(Collectors.toList());
+        
+        // Forzar carga de relaciones lazy
+        citas.forEach(c -> {
+            c.getPaciente().getUsuario().getNombre();
+            c.getMedico().getUsuario().getNombre();
+            c.getHorario().getHoraInicio();
+        });
         
         List<CitaResponse> response = citas.stream()
                 .map(this::convertirACitaResponse)
@@ -80,12 +104,21 @@ public class CitaController {
         return ResponseEntity.ok(response);
     }
 
-    // READ - Listar por médico y fecha (endpoint alternativo)
+    // READ - Listar por médico y fecha
     @GetMapping("/medico/{idMedico}/fecha")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<CitaResponse>> listarPorMedicoYFecha(
             @PathVariable Integer idMedico,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
         List<Cita> citas = citaService.listarPorMedicoYFecha(idMedico, fecha);
+        
+        // Forzar carga de relaciones lazy
+        citas.forEach(c -> {
+            c.getPaciente().getUsuario().getNombre();
+            c.getMedico().getUsuario().getNombre();
+            c.getHorario().getHoraInicio();
+        });
+        
         List<CitaResponse> response = citas.stream()
                 .map(this::convertirACitaResponse)
                 .collect(Collectors.toList());
@@ -94,8 +127,17 @@ public class CitaController {
 
     // READ - Listar por paciente
     @GetMapping("/paciente/{idPaciente}")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<CitaResponse>> listarPorPaciente(@PathVariable Integer idPaciente) {
         List<Cita> citas = citaService.listarPorPaciente(idPaciente);
+        
+        // Forzar carga de relaciones lazy
+        citas.forEach(c -> {
+            c.getPaciente().getUsuario().getNombre();
+            c.getMedico().getUsuario().getNombre();
+            c.getHorario().getHoraInicio();
+        });
+        
         List<CitaResponse> response = citas.stream()
                 .map(this::convertirACitaResponse)
                 .collect(Collectors.toList());
@@ -104,16 +146,29 @@ public class CitaController {
 
     // UPDATE - Cancelar cita
     @PutMapping("/{id}/cancelar")
+    @Transactional
     public ResponseEntity<CitaResponse> cancelarCita(@PathVariable Integer id) {
         Cita cita = citaService.cambiarEstado(id, EstadoCita.Cancelada, "Cancelada por el usuario");
+        
+        // Forzar carga de relaciones lazy
+        cita.getPaciente().getUsuario().getNombre();
+        cita.getMedico().getUsuario().getNombre();
+        cita.getHorario().getHoraInicio();
+        
         return ResponseEntity.ok(convertirACitaResponse(cita));
     }
 
-    // UPDATE - Completar cita (NUEVO - para médicos)
+    // UPDATE - Completar cita (CORREGIDO)
     @PutMapping("/{id}/completar")
+    @Transactional
     public ResponseEntity<CitaResponse> completarCita(@PathVariable Integer id) {
         Cita cita = citaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Cita no encontrada"));
+        
+        // Forzar carga de relaciones lazy ANTES de modificar
+        cita.getPaciente().getUsuario().getNombre();
+        cita.getMedico().getUsuario().getNombre();
+        cita.getHorario().getHoraInicio();
         
         // Cambiar estado a Completada
         cita.setEstado(EstadoCita.Completada);
@@ -124,11 +179,18 @@ public class CitaController {
 
     // UPDATE - Reprogramar cita
     @PutMapping("/{id}/reprogramar")
+    @Transactional
     public ResponseEntity<CitaResponse> reprogramarCita(
             @PathVariable Integer id,
             @RequestParam Integer nuevoIdHorario,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate nuevaFecha) {
         Cita cita = citaService.reprogramar(id, nuevoIdHorario, nuevaFecha);
+        
+        // Forzar carga de relaciones lazy
+        cita.getPaciente().getUsuario().getNombre();
+        cita.getMedico().getUsuario().getNombre();
+        cita.getHorario().getHoraInicio();
+        
         return ResponseEntity.ok(convertirACitaResponse(cita));
     }
 

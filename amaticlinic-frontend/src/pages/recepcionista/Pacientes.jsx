@@ -1,4 +1,4 @@
-// src/pages/recepcionista/Pacientes.jsx
+// src/pages/recepcionista/Pacientes.jsx - CON documento_identidad
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +26,8 @@ const RecepcionistaPacientes = () => {
   const cargarPacientes = async () => {
     try {
       const response = await api.get('/pacientes');
+      console.log('📋 Datos de pacientes:', response.data[0]); // Ver estructura
+      
       // Agregar conteo de citas
       const responseCitas = await api.get('/citas');
       const pacientesConCitas = response.data.map(p => {
@@ -49,12 +51,28 @@ const RecepcionistaPacientes = () => {
       setPacientesFiltrados(pacientes);
       return;
     }
-    const resultado = pacientes.filter(p =>
-      p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      p.apellido.toLowerCase().includes(busqueda.toLowerCase()) ||
-      p.dpi.includes(busqueda)
-    );
+    
+    const busquedaLower = busqueda.toLowerCase();
+    
+    const resultado = pacientes.filter(p => {
+      // Búsqueda que soporta AMBOS nombres de campo
+      const nombre = (p.nombre || '').toLowerCase();
+      const apellido = (p.apellido || '').toLowerCase();
+      const dpi = (p.dpi || p.documentoIdentidad || '').toString();
+      const correo = (p.correo || '').toLowerCase();
+      
+      return nombre.includes(busquedaLower) ||
+             apellido.includes(busquedaLower) ||
+             dpi.includes(busqueda) ||
+             correo.includes(busquedaLower);
+    });
+    
     setPacientesFiltrados(resultado);
+  };
+
+  // Función para obtener el DPI (soporta ambos nombres)
+  const obtenerDPI = (paciente) => {
+    return paciente.dpi || paciente.documentoIdentidad || 'No registrado';
   };
 
   if (loading) {
@@ -103,7 +121,7 @@ const RecepcionistaPacientes = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Buscar por nombre o DPI..."
+              placeholder="Buscar por nombre, DPI o correo..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
@@ -118,7 +136,9 @@ const RecepcionistaPacientes = () => {
         {pacientesFiltrados.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-12 text-center">
             <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No hay pacientes registrados</p>
+            <p className="text-gray-500 text-lg">
+              {busqueda ? 'No se encontraron pacientes' : 'No hay pacientes registrados'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -127,14 +147,16 @@ const RecepcionistaPacientes = () => {
                 <div className="flex items-start space-x-4 mb-4">
                   <div className="w-16 h-16 bg-purple/10 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-2xl font-bold text-purple">
-                      {paciente.nombre.charAt(0)}{paciente.apellido.charAt(0)}
+                      {paciente.nombre?.charAt(0) || '?'}{paciente.apellido?.charAt(0) || '?'}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-gray-800 truncate">
                       {paciente.nombre} {paciente.apellido}
                     </h3>
-                    <p className="text-sm text-gray-500">DPI: {paciente.dpi}</p>
+                    <p className="text-sm text-gray-500">
+                      DPI: {obtenerDPI(paciente)}
+                    </p>
                   </div>
                 </div>
 

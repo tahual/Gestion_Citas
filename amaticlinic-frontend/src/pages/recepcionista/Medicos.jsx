@@ -1,11 +1,11 @@
-// src/pages/recepcionista/Medicos.jsx - SIN LICENCIA MÉDICA
+// src/pages/recepcionista/Medicos.jsx - CON CAMPOS COMPLETOS
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { 
   Search, UserCog, Stethoscope, LogOut, Plus, Edit, Trash2, 
-  Briefcase, MapPin, Phone, Mail, X
+  Briefcase, MapPin, Phone, Mail, X, Award, FileText
 } from 'lucide-react';
 
 const RecepcionistaMedicos = () => {
@@ -28,6 +28,8 @@ const RecepcionistaMedicos = () => {
     telefono: '',
     especialidad: '',
     consultorio: '',
+    anosExperiencia: '',
+    descripcion: '',
     password: ''
   });
 
@@ -74,6 +76,8 @@ const RecepcionistaMedicos = () => {
       telefono: '',
       especialidad: '',
       consultorio: '',
+      anosExperiencia: '',
+      descripcion: '',
       password: ''
     });
     setMostrarModal(true);
@@ -89,6 +93,8 @@ const RecepcionistaMedicos = () => {
       telefono: medico.telefono || '',
       especialidad: medico.especialidad,
       consultorio: medico.consultorio || '',
+      anosExperiencia: medico.anosExperiencia || '',
+      descripcion: medico.descripcion || '',
       password: ''
     });
     setMostrarModal(true);
@@ -104,6 +110,8 @@ const RecepcionistaMedicos = () => {
       telefono: '',
       especialidad: '',
       consultorio: '',
+      anosExperiencia: '',
+      descripcion: '',
       password: ''
     });
   };
@@ -243,6 +251,12 @@ const RecepcionistaMedicos = () => {
                 </div>
 
                 <div className="space-y-2 mb-4">
+                  {medico.anosExperiencia > 0 && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Award size={16} className="mr-2 text-gray-400" />
+                      <span>{medico.anosExperiencia} años de experiencia</span>
+                    </div>
+                  )}
                   {medico.consultorio && (
                     <div className="flex items-center text-sm text-gray-600">
                       <MapPin size={16} className="mr-2 text-gray-400" />
@@ -262,6 +276,12 @@ const RecepcionistaMedicos = () => {
                     </div>
                   )}
                 </div>
+
+                {medico.descripcion && (
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 line-clamp-2">{medico.descripcion}</p>
+                  </div>
+                )}
 
                 <div className="flex space-x-2">
                   <button 
@@ -388,9 +408,25 @@ const RecepcionistaMedicos = () => {
                     />
                   </div>
 
+                  {/* Años de Experiencia - NUEVO */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Años de Experiencia
+                    </label>
+                    <input
+                      type="number"
+                      name="anosExperiencia"
+                      value={formData.anosExperiencia}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="50"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
                   {/* Password (solo al crear) */}
                   {!modoEdicion && (
-                    <div className="md:col-span-2">
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Contraseña *
                       </label>
@@ -404,6 +440,21 @@ const RecepcionistaMedicos = () => {
                       />
                     </div>
                   )}
+                </div>
+
+                {/* Descripción - NUEVO */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descripción / Biografía
+                  </label>
+                  <textarea
+                    name="descripcion"
+                    value={formData.descripcion}
+                    onChange={handleInputChange}
+                    rows="4"
+                    placeholder="Especialista en medicina interna con amplia experiencia..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  />
                 </div>
 
                 <div className="flex space-x-4 pt-4">

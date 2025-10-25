@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/App.jsx - ACTUALIZADO CON RUTA DE PACIENTE DETALLE
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
@@ -16,7 +16,9 @@ import Medicos from './pages/paciente/Medicos';
 // Páginas de Médico
 import MedicoDashboard from './pages/medico/Dashboard';
 import MedicoCitas from './pages/medico/Citas';
+import CitaDetalle from './pages/medico/CitaDetalle';
 import MedicoPacientes from './pages/medico/Pacientes';
+import PacienteDetalle from './pages/medico/PacienteDetalle'; // ← NUEVO
 import MedicoHistorial from './pages/medico/Historial';
 
 // Páginas de Recepcionista
@@ -86,10 +88,27 @@ function App() {
             }
           />
           <Route
+            path="/medico/citas/:id"
+            element={
+              <PrivateRoute allowedRoles={['Medico']}>
+                <CitaDetalle />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/medico/pacientes"
             element={
               <PrivateRoute allowedRoles={['Medico']}>
                 <MedicoPacientes />
+              </PrivateRoute>
+            }
+          />
+          {/* NUEVA RUTA - Detalle del paciente */}
+          <Route
+            path="/medico/pacientes/:id"
+            element={
+              <PrivateRoute allowedRoles={['Medico']}>
+                <PacienteDetalle />
               </PrivateRoute>
             }
           />

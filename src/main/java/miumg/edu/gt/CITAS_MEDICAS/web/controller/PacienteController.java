@@ -39,7 +39,7 @@ public class PacienteController {
         Paciente paciente = new Paciente();
         paciente.setUsuario(usuario);
         paciente.setDocumentoIdentidad(request.getDocumentoIdentidad());
-        paciente.setFecha_nacimiento(request.getFechaNacimiento());
+        paciente.setFechaNacimiento(request.getFechaNacimiento());
         paciente.setDireccion(request.getDireccion());
         paciente.setTipoSangre(request.getTipoSangre());
         paciente.setAlergias(request.getAlergias());
@@ -77,7 +77,7 @@ public class PacienteController {
         Paciente paciente = pacienteService.obtener(id);
 
         if (request.getFechaNacimiento() != null) {
-            paciente.setFecha_nacimiento(request.getFechaNacimiento());
+            paciente.setFechaNacimiento(request.getFechaNacimiento());
         }
         if (request.getDireccion() != null) {
             paciente.setDireccion(request.getDireccion());
@@ -105,7 +105,7 @@ public class PacienteController {
         response.setCorreo(paciente.getUsuario().getCorreo());
         response.setTelefono(paciente.getUsuario().getTelefono());
         response.setDocumentoIdentidad(paciente.getDocumentoIdentidad());
-        response.setFechaNacimiento(paciente.getFecha_nacimiento());
+        response.setFechaNacimiento(paciente.getFechaNacimiento());
         response.setDireccion(paciente.getDireccion());
         response.setTipoSangre(paciente.getTipoSangre());
         response.setAlergias(paciente.getAlergias());

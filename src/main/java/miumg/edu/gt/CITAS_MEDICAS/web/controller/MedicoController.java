@@ -1,4 +1,5 @@
 // src/main/java/miumg/edu/gt/CITAS_MEDICAS/web/controller/MedicoController.java
+// ACTUALIZADO CON AÑOS DE EXPERIENCIA Y DESCRIPCIÓN
 package miumg.edu.gt.CITAS_MEDICAS.web.controller;
 
 import jakarta.validation.Valid;
@@ -68,9 +69,10 @@ public class MedicoController {
         medico.setUsuario(usuarioGuardado);
         medico.setEspecialidad(request.getEspecialidad());
         medico.setConsultorio(request.getConsultorio());
-        // Valores por defecto
-        medico.setAnosExperiencia(0);
-        medico.setDescripcion("");
+        
+        // NUEVO: Guardar años de experiencia y descripción
+        medico.setAnosExperiencia(request.getAnosExperiencia() != null ? request.getAnosExperiencia() : 0);
+        medico.setDescripcion(request.getDescripcion() != null ? request.getDescripcion() : "");
 
         Medico guardado = medicoRepository.save(medico);
 
@@ -171,6 +173,14 @@ public class MedicoController {
         // Actualizar datos del médico
         medico.setEspecialidad(request.getEspecialidad());
         medico.setConsultorio(request.getConsultorio());
+        
+        // NUEVO: Actualizar años de experiencia y descripción
+        if (request.getAnosExperiencia() != null) {
+            medico.setAnosExperiencia(request.getAnosExperiencia());
+        }
+        if (request.getDescripcion() != null) {
+            medico.setDescripcion(request.getDescripcion());
+        }
 
         Medico actualizado = medicoRepository.save(medico);
         return ResponseEntity.ok(convertirAMedicoResponse(actualizado));

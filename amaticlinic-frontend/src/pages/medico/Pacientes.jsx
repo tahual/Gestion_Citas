@@ -1,4 +1,4 @@
-// src/pages/medico/Pacientes.jsx
+// src/pages/medico/Pacientes.jsx - CORREGIDO
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -18,7 +18,7 @@ import {
 const MedicoPacientes = () => {
   const { user, logout } = useAuth();
   
-  const [pacientes, setPackientes] = useState([]);
+  const [pacientes, setPacientes] = useState([]);
   const [pacientesFiltrados, setPacientesFiltrados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
@@ -63,7 +63,7 @@ const MedicoPacientes = () => {
           };
         });
         
-        setPackientes(pacientesConCitas);
+        setPacientes(pacientesConCitas);
         setPacientesFiltrados(pacientesConCitas);
       }
     } catch (error) {
@@ -79,13 +79,27 @@ const MedicoPacientes = () => {
       return;
     }
 
-    const resultado = pacientes.filter(paciente =>
-      paciente.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      paciente.apellido.toLowerCase().includes(busqueda.toLowerCase()) ||
-      paciente.dpi.includes(busqueda)
-    );
+    const busquedaLower = busqueda.toLowerCase();
+
+    const resultado = pacientes.filter(paciente => {
+      // Búsqueda segura que soporta ambos nombres de campo
+      const nombre = (paciente.nombre || '').toLowerCase();
+      const apellido = (paciente.apellido || '').toLowerCase();
+      const dpi = (paciente.dpi || paciente.documentoIdentidad || '').toString();
+      const correo = (paciente.correo || '').toLowerCase();
+      
+      return nombre.includes(busquedaLower) ||
+             apellido.includes(busquedaLower) ||
+             dpi.includes(busqueda) ||
+             correo.includes(busquedaLower);
+    });
 
     setPacientesFiltrados(resultado);
+  };
+
+  // Función para obtener el DPI (soporta ambos nombres)
+  const obtenerDPI = (paciente) => {
+    return paciente.dpi || paciente.documentoIdentidad || 'No registrado';
   };
 
   if (loading) {
@@ -177,14 +191,16 @@ const MedicoPacientes = () => {
                 <div className="flex items-start space-x-4 mb-4">
                   <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-2xl font-bold text-success">
-                      {paciente.nombre.charAt(0)}{paciente.apellido.charAt(0)}
+                      {paciente.nombre?.charAt(0) || '?'}{paciente.apellido?.charAt(0) || '?'}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-gray-800 truncate">
                       {paciente.nombre} {paciente.apellido}
                     </h3>
-                    <p className="text-sm text-gray-500">DPI: {paciente.dpi}</p>
+                    <p className="text-sm text-gray-500">
+                      DPI: {obtenerDPI(paciente)}
+                    </p>
                   </div>
                 </div>
 
@@ -232,9 +248,9 @@ const MedicoPacientes = () => {
                   )}
                 </div>
 
-                {/* Acciones */}
+                {/* Acciones - CORREGIDO: ahora va a /medico/pacientes/:id */}
                 <Link
-                  to={`/medico/historial?paciente=${paciente.id}`}
+                  to={`/medico/pacientes/${paciente.id}`}
                   className="w-full btn-outline flex items-center justify-center space-x-2"
                 >
                   <FileText size={18} />

@@ -23,6 +23,11 @@ public class MedicoCreateRequest {
     
     private String consultorio;
     
+    // NUEVOS CAMPOS
+    private Integer anosExperiencia;
+    
+    private String descripcion;
+    
     private String password;
 
     // Getters y Setters
@@ -72,6 +77,22 @@ public class MedicoCreateRequest {
 
     public void setConsultorio(String consultorio) {
         this.consultorio = consultorio;
+    }
+
+    public Integer getAnosExperiencia() {
+        return anosExperiencia;
+    }
+
+    public void setAnosExperiencia(Integer anosExperiencia) {
+        this.anosExperiencia = anosExperiencia;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
 
     public String getPassword() {
