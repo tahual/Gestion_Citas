@@ -1,3 +1,4 @@
+// src/main/java/miumg/edu/gt/CITAS_MEDICAS/web/controller/CitaController.java
 package miumg.edu.gt.CITAS_MEDICAS.web.controller;
 
 import jakarta.validation.Valid;
@@ -37,6 +38,12 @@ public class CitaController {
                 request.getIdHorario(),
                 request.getFecha()
         );
+        
+        // Agregar motivo de consulta
+        if (request.getMotivoConsulta() != null) {
+            cita.setMotivoConsulta(request.getMotivoConsulta());
+            cita = citaRepository.save(cita);
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(convertirACitaResponse(cita));
     }
@@ -59,9 +66,23 @@ public class CitaController {
         return ResponseEntity.ok(response);
     }
 
-    // READ - Listar por médico y fecha
+    // READ - Listar por médico (TODAS las citas del médico)
     @GetMapping("/medico/{idMedico}")
-    public ResponseEntity<List<CitaResponse>> listarPorMedico(
+    public ResponseEntity<List<CitaResponse>> listarPorMedico(@PathVariable Integer idMedico) {
+        // Obtener TODAS las citas del médico (sin filtro de fecha)
+        List<Cita> citas = citaRepository.findAll().stream()
+                .filter(c -> c.getMedico().getId().equals(idMedico))
+                .collect(Collectors.toList());
+        
+        List<CitaResponse> response = citas.stream()
+                .map(this::convertirACitaResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    // READ - Listar por médico y fecha (endpoint alternativo)
+    @GetMapping("/medico/{idMedico}/fecha")
+    public ResponseEntity<List<CitaResponse>> listarPorMedicoYFecha(
             @PathVariable Integer idMedico,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
         List<Cita> citas = citaService.listarPorMedicoYFecha(idMedico, fecha);
@@ -86,6 +107,19 @@ public class CitaController {
     public ResponseEntity<CitaResponse> cancelarCita(@PathVariable Integer id) {
         Cita cita = citaService.cambiarEstado(id, EstadoCita.Cancelada, "Cancelada por el usuario");
         return ResponseEntity.ok(convertirACitaResponse(cita));
+    }
+
+    // UPDATE - Completar cita (NUEVO - para médicos)
+    @PutMapping("/{id}/completar")
+    public ResponseEntity<CitaResponse> completarCita(@PathVariable Integer id) {
+        Cita cita = citaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Cita no encontrada"));
+        
+        // Cambiar estado a Completada
+        cita.setEstado(EstadoCita.Completada);
+        Cita actualizada = citaRepository.save(cita);
+        
+        return ResponseEntity.ok(convertirACitaResponse(actualizada));
     }
 
     // UPDATE - Reprogramar cita
@@ -118,8 +152,12 @@ public class CitaController {
         response.setNombreMedico(cita.getMedico().getUsuario().getNombre() + " " + 
                                 cita.getMedico().getUsuario().getApellido());
         response.setEspecialidad(cita.getMedico().getEspecialidad());
+        response.setConsultorio(cita.getMedico().getConsultorio());
         response.setFecha(cita.getFecha());
+        response.setHoraInicio(cita.getHorario().getHoraInicio());
+        response.setHoraFin(cita.getHorario().getHoraFin());
         response.setEstado(cita.getEstado());
+        response.setMotivoConsulta(cita.getMotivoConsulta());
         return response;
     }
 }

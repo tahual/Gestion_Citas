@@ -1,3 +1,4 @@
+// src/main/java/miumg/edu/gt/CITAS_MEDICAS/web/controller/PacienteController.java
 package miumg.edu.gt.CITAS_MEDICAS.web.controller;
 
 import jakarta.validation.Valid;
@@ -37,8 +38,13 @@ public class PacienteController {
 
         Paciente paciente = new Paciente();
         paciente.setUsuario(usuario);
+        paciente.setDocumentoIdentidad(request.getDocumentoIdentidad());
         paciente.setFecha_nacimiento(request.getFechaNacimiento());
         paciente.setDireccion(request.getDireccion());
+        paciente.setTipoSangre(request.getTipoSangre());
+        paciente.setAlergias(request.getAlergias());
+        paciente.setContactoEmergenciaNombre(request.getContactoEmergenciaNombre());
+        paciente.setContactoEmergenciaTelefono(request.getContactoEmergenciaTelefono());
 
         Paciente guardado = pacienteService.crear(paciente);
 
@@ -98,8 +104,13 @@ public class PacienteController {
         response.setApellido(paciente.getUsuario().getApellido());
         response.setCorreo(paciente.getUsuario().getCorreo());
         response.setTelefono(paciente.getUsuario().getTelefono());
+        response.setDocumentoIdentidad(paciente.getDocumentoIdentidad());
         response.setFechaNacimiento(paciente.getFecha_nacimiento());
         response.setDireccion(paciente.getDireccion());
+        response.setTipoSangre(paciente.getTipoSangre());
+        response.setAlergias(paciente.getAlergias());
+        response.setContactoEmergenciaNombre(paciente.getContactoEmergenciaNombre());
+        response.setContactoEmergenciaTelefono(paciente.getContactoEmergenciaTelefono());
         return response;
     }
 }

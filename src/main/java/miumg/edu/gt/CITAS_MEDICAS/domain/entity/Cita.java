@@ -14,9 +14,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import miumg.edu.gt.CITAS_MEDICAS.domain.enums.EstadoCita;
 
 /**
@@ -43,62 +45,41 @@ public class Cita {
     @JoinColumn(name = "id_horario", nullable = false)
     private Horario horario;
 
-    @NotNull
+    @Column(nullable = false)
     private LocalDate fecha;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private EstadoCita estado;
+    @Column(length = 20)
+    private EstadoCita estado = EstadoCita.Agendada;
 
-    public Integer getId() {
-        return id;
-    }
+    @Column(name = "motivo_consulta", columnDefinition = "TEXT")
+    private String motivoConsulta;
 
-    public void setId(Integer id) {
-        this.id = id;
-    }
+    @OneToMany(mappedBy = "cita")
+    private List<Notificacion> notificaciones = new ArrayList<>();
 
-    public Paciente getPaciente() {
-        return paciente;
-    }
+    // Getters y Setters
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
 
-    public void setPaciente(Paciente paciente) {
-        this.paciente = paciente;
-    }
+    public Paciente getPaciente() { return paciente; }
+    public void setPaciente(Paciente paciente) { this.paciente = paciente; }
 
-    public Medico getMedico() {
-        return medico;
-    }
+    public Medico getMedico() { return medico; }
+    public void setMedico(Medico medico) { this.medico = medico; }
 
-    public void setMedico(Medico medico) {
-        this.medico = medico;
-    }
+    public Horario getHorario() { return horario; }
+    public void setHorario(Horario horario) { this.horario = horario; }
 
-    public Horario getHorario() {
-        return horario;
-    }
+    public LocalDate getFecha() { return fecha; }
+    public void setFecha(LocalDate fecha) { this.fecha = fecha; }
 
-    public void setHorario(Horario horario) {
-        this.horario = horario;
-    }
+    public EstadoCita getEstado() { return estado; }
+    public void setEstado(EstadoCita estado) { this.estado = estado; }
 
-    public LocalDate getFecha() {
-        return fecha;
-    }
+    public String getMotivoConsulta() { return motivoConsulta; }
+    public void setMotivoConsulta(String motivoConsulta) { this.motivoConsulta = motivoConsulta; }
 
-    public void setFecha(LocalDate fecha) {
-        this.fecha = fecha;
-    }
-
-    public EstadoCita getEstado() {
-        return estado;
-    }
-
-    public void setEstado(EstadoCita estado) {
-        this.estado = estado;
-    }
-    
-    
-
-    
+    public List<Notificacion> getNotificaciones() { return notificaciones; }
+    public void setNotificaciones(List<Notificacion> notificaciones) { this.notificaciones = notificaciones; }
 }

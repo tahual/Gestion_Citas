@@ -1,3 +1,4 @@
+// src/main/java/miumg/edu/gt/CITAS_MEDICAS/web/dto/request/MedicoRequest.java
 package miumg.edu.gt.CITAS_MEDICAS.web.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
@@ -12,6 +13,13 @@ public class MedicoRequest {
     @NotBlank(message = "La especialidad es obligatoria")
     @Size(max = 50)
     private String especialidad;
+    
+    private Integer anosExperiencia;
+    
+    private String descripcion;
+    
+    @Size(max = 50)
+    private String consultorio;
 
     // Getters y Setters
     public Integer getIdUsuario() { return idUsuario; }
@@ -19,4 +27,13 @@ public class MedicoRequest {
     
     public String getEspecialidad() { return especialidad; }
     public void setEspecialidad(String especialidad) { this.especialidad = especialidad; }
+    
+    public Integer getAnosExperiencia() { return anosExperiencia; }
+    public void setAnosExperiencia(Integer anosExperiencia) { this.anosExperiencia = anosExperiencia; }
+    
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+    
+    public String getConsultorio() { return consultorio; }
+    public void setConsultorio(String consultorio) { this.consultorio = consultorio; }
 }

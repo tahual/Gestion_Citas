@@ -8,4 +8,4 @@ package miumg.edu.gt.CITAS_MEDICAS.domain.enums;
  *
  * @author danyt
  */
-public enum EstadoCita { Agendada, Cancelada, Modificada }
+public enum EstadoCita { Agendada, Cancelada, Modificada, Completada}
