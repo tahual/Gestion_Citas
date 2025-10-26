@@ -1,5 +1,5 @@
 // src/main/java/miumg/edu/gt/CITAS_MEDICAS/web/controller/HorarioController.java
-// VERSIÓN CORREGIDA - Sin error de lambda
+// ACTUALIZADO CON VALIDACIÓN DE DUPLICADOS
 package miumg.edu.gt.CITAS_MEDICAS.web.controller;
 
 import jakarta.validation.Valid;
@@ -44,21 +44,51 @@ public class HorarioController {
         this.citaRepository = citaRepository;
     }
 
-    // CREATE
+    // CREATE - CON VALIDACIÓN DE DUPLICADOS
     @PostMapping
     @PreAuthorize("hasRole('Recepcionista')")
-    public ResponseEntity<HorarioResponse> crear(@Valid @RequestBody HorarioRequest request) {
-        Medico medico = medicoRepository.findById(request.getIdMedico())
-                .orElseThrow(() -> new IllegalArgumentException("Médico no encontrado"));
+    @Transactional
+    public ResponseEntity<?> crear(@Valid @RequestBody HorarioRequest request) {
+        try {
+            Medico medico = medicoRepository.findById(request.getIdMedico())
+                    .orElseThrow(() -> new IllegalArgumentException("Médico no encontrado"));
 
-        Horario horario = new Horario();
-        horario.setMedico(medico);
-        horario.setDiaSemana(DiaSemana.valueOf(request.getDiaSemana()));
-        horario.setHoraInicio(request.getHoraInicio());
-        horario.setHoraFin(request.getHoraFin());
+            DiaSemana diaSemana = DiaSemana.valueOf(request.getDiaSemana());
 
-        Horario guardado = horarioRepository.save(horario);
-        return ResponseEntity.status(HttpStatus.CREATED).body(convertirAHorarioResponse(guardado));
+            // NUEVA VALIDACIÓN: Verificar si ya existe un horario para este médico en este día
+            boolean existeHorario = horarioRepository.findAll().stream()
+                    .anyMatch(h -> h.getMedico().getId().equals(request.getIdMedico()) &&
+                                 h.getDiaSemana().equals(diaSemana));
+
+            if (existeHorario) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new ErrorResponse(
+                            "Ya existe un horario para este médico el día " + diaSemana + 
+                            ". Por favor, edita el horario existente o elimínalo primero."
+                        ));
+            }
+
+            // VALIDACIÓN: Verificar que hora_fin sea mayor que hora_inicio
+            if (!request.getHoraFin().isAfter(request.getHoraInicio())) {
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("La hora de fin debe ser mayor que la hora de inicio"));
+            }
+
+            Horario horario = new Horario();
+            horario.setMedico(medico);
+            horario.setDiaSemana(diaSemana);
+            horario.setHoraInicio(request.getHoraInicio());
+            horario.setHoraFin(request.getHoraFin());
+
+            Horario guardado = horarioRepository.save(horario);
+            return ResponseEntity.status(HttpStatus.CREATED).body(convertirAHorarioResponse(guardado));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error al crear horario: " + e.getMessage()));
+        }
     }
 
     // READ - Todos
@@ -103,28 +133,25 @@ public class HorarioController {
         return ResponseEntity.ok(convertirAHorarioResponse(horario));
     }
 
-    // NUEVO: Obtener slots disponibles (1 HORA POR CITA)
+    // SLOTS DISPONIBLES
     @GetMapping("/slots-disponibles")
     @Transactional(readOnly = true)
     public ResponseEntity<List<SlotDisponibleResponse>> obtenerSlotsDisponibles(
             @RequestParam Integer idMedico,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
         
-        // 1. Obtener día de la semana de la fecha
         DayOfWeek dayOfWeek = fecha.getDayOfWeek();
         String diaSemanaEsp = convertirDiaSemana(dayOfWeek);
         
-        // 2. Buscar horarios del médico para ese día
         List<Horario> horarios = horarioRepository.findAll().stream()
                 .filter(h -> h.getMedico().getId().equals(idMedico) && 
                            h.getDiaSemana().toString().equals(diaSemanaEsp))
                 .collect(Collectors.toList());
         
         if (horarios.isEmpty()) {
-            return ResponseEntity.ok(new ArrayList<>()); // No hay horarios configurados
+            return ResponseEntity.ok(new ArrayList<>());
         }
         
-        // 3. Obtener TODAS las citas del médico en esa fecha
         List<Cita> citasDelDia = citaRepository.findAll().stream()
                 .filter(c -> c.getMedico().getId().equals(idMedico) &&
                            c.getFecha().equals(fecha))
@@ -132,67 +159,119 @@ public class HorarioController {
         
         List<SlotDisponibleResponse> todosLosSlots = new ArrayList<>();
         
-        // 4. Para cada horario, generar slots de 1 HORA
         for (Horario horario : horarios) {
             LocalTime horaActual = horario.getHoraInicio();
             
             while (horaActual.isBefore(horario.getHoraFin())) {
-                LocalTime horaFinSlot = horaActual.plusHours(1); // 1 HORA
+                LocalTime horaFinSlot = horaActual.plusHours(1);
                 
-                // 5. Verificar si YA HAY una cita en este horario
-                final LocalTime horaSlot = horaActual; // Variable final para lambda
+                final LocalTime horaSlot = horaActual;
                 boolean hayOtraCita = citasDelDia.stream()
                         .anyMatch(c -> c.getHoraInicio().equals(horaSlot));
                 
-                // 6. Crear respuesta del slot (disponible si NO hay cita)
                 SlotDisponibleResponse slot = new SlotDisponibleResponse(
                     horaActual.toString(),
                     horaActual,
                     horaFinSlot,
-                    hayOtraCita // ocupado = true si ya hay cita
+                    hayOtraCita
                 );
                 
                 todosLosSlots.add(slot);
-                horaActual = horaFinSlot; // Siguiente hora
+                horaActual = horaFinSlot;
             }
         }
         
         return ResponseEntity.ok(todosLosSlots);
     }
 
-    // UPDATE
+    // UPDATE - CON VALIDACIÓN
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('Recepcionista')")
     @Transactional
-    public ResponseEntity<HorarioResponse> actualizar(
+    public ResponseEntity<?> actualizar(
             @PathVariable Integer id,
             @Valid @RequestBody HorarioRequest request) {
         
-        Horario horario = horarioRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Horario no encontrado"));
-        
-        horario.getMedico().getUsuario().getNombre();
-        
-        horario.setDiaSemana(DiaSemana.valueOf(request.getDiaSemana()));
-        horario.setHoraInicio(request.getHoraInicio());
-        horario.setHoraFin(request.getHoraFin());
+        try {
+            Horario horario = horarioRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Horario no encontrado"));
+            
+            horario.getMedico().getUsuario().getNombre();
+            
+            DiaSemana nuevoDiaSemana = DiaSemana.valueOf(request.getDiaSemana());
+            
+            // VALIDACIÓN: Si cambió el día, verificar que no exista otro horario para ese día
+            if (!horario.getDiaSemana().equals(nuevoDiaSemana)) {
+                boolean existeOtroHorario = horarioRepository.findAll().stream()
+                        .anyMatch(h -> !h.getId().equals(id) && 
+                                     h.getMedico().getId().equals(horario.getMedico().getId()) &&
+                                     h.getDiaSemana().equals(nuevoDiaSemana));
+                
+                if (existeOtroHorario) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body(new ErrorResponse(
+                                "Ya existe otro horario para este médico el día " + nuevoDiaSemana
+                            ));
+                }
+            }
+            
+            // VALIDACIÓN: hora_fin > hora_inicio
+            if (!request.getHoraFin().isAfter(request.getHoraInicio())) {
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("La hora de fin debe ser mayor que la hora de inicio"));
+            }
+            
+            horario.setDiaSemana(nuevoDiaSemana);
+            horario.setHoraInicio(request.getHoraInicio());
+            horario.setHoraFin(request.getHoraFin());
 
-        Horario actualizado = horarioRepository.save(horario);
-        return ResponseEntity.ok(convertirAHorarioResponse(actualizado));
+            Horario actualizado = horarioRepository.save(horario);
+            return ResponseEntity.ok(convertirAHorarioResponse(actualizado));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error al actualizar horario: " + e.getMessage()));
+        }
     }
 
-    // DELETE
+    // DELETE - ACTUALIZADO: Permitir a Recepcionista
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('Recepcionista')")
-    public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
-        Horario horario = horarioRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Horario no encontrado"));
-        
-        horarioRepository.delete(horario);
-        return ResponseEntity.noContent().build();
+    @Transactional
+    public ResponseEntity<?> eliminar(@PathVariable Integer id) {
+        try {
+            Horario horario = horarioRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Horario no encontrado"));
+            
+            // VALIDACIÓN: Verificar si hay citas futuras con este horario
+            long citasFuturas = citaRepository.findAll().stream()
+                    .filter(c -> c.getHorario().getId().equals(id) &&
+                               c.getFecha().isAfter(LocalDate.now()))
+                    .count();
+            
+            if (citasFuturas > 0) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new ErrorResponse(
+                            "No se puede eliminar este horario porque tiene " + citasFuturas + 
+                            " cita(s) programada(s). Por favor, cancela o reprograma las citas primero."
+                        ));
+            }
+            
+            horarioRepository.delete(horario);
+            return ResponseEntity.noContent().build();
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error al eliminar horario: " + e.getMessage()));
+        }
     }
 
-    // Método auxiliar para convertir día de la semana
+    // Método auxiliar
     private String convertirDiaSemana(DayOfWeek dayOfWeek) {
         switch (dayOfWeek) {
             case MONDAY: return "Lunes";
@@ -206,7 +285,7 @@ public class HorarioController {
         }
     }
 
-    // Método auxiliar para convertir a DTO
+    // Método auxiliar
     private HorarioResponse convertirAHorarioResponse(Horario horario) {
         HorarioResponse response = new HorarioResponse();
         response.setId(horario.getId());
@@ -218,5 +297,22 @@ public class HorarioController {
         response.setHoraInicio(horario.getHoraInicio());
         response.setHoraFin(horario.getHoraFin());
         return response;
+    }
+    
+    // Clase interna para respuestas de error
+    public static class ErrorResponse {
+        private String message;
+        
+        public ErrorResponse(String message) {
+            this.message = message;
+        }
+        
+        public String getMessage() {
+            return message;
+        }
+        
+        public void setMessage(String message) {
+            this.message = message;
+        }
     }
 }
