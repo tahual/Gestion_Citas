@@ -1,134 +1,162 @@
-// src/pages/paciente/AgendarCita.jsx
+// src/pages/paciente/AgendarCita.jsx - CON SISTEMA DE SLOTS
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { 
-  ArrowLeft,
-  Calendar,
-  Clock,
-  User,
-  FileText,
-  CheckCircle,
-  Stethoscope,
-  LogOut
+  Calendar, Clock, User, Stethoscope, LogOut, 
+  ChevronLeft, Check, X, AlertCircle
 } from 'lucide-react';
 
 const AgendarCita = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   
-  const [paso, setPaso] = useState(1);
   const [medicos, setMedicos] = useState([]);
-  const [horarios, setHorarios] = useState([]);
-  const [idPaciente, setIdPaciente] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [pacienteId, setPacienteId] = useState(null);
   
-  const [formData, setFormData] = useState({
-    idMedico: location.state?.medicoId || '',
-    idHorario: '',
-    fecha: '',
-    motivoConsulta: '',
-  });
-
-  const [medicoSeleccionado, setMedicoSeleccionado] = useState(null);
-  const [horarioSeleccionado, setHorarioSeleccionado] = useState(null);
+  // Estados del formulario
+  const [medicoSeleccionado, setMedicoSeleccionado] = useState('');
+  const [fechaSeleccionada, setFechaSeleccionada] = useState('');
+  const [slotSeleccionado, setSlotSeleccionado] = useState(null);
+  const [motivoConsulta, setMotivoConsulta] = useState('');
+  
+  // Estados de slots
+  const [slots, setSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [errorSlots, setErrorSlots] = useState('');
 
   useEffect(() => {
     cargarDatos();
   }, []);
 
   useEffect(() => {
-    if (formData.idMedico) {
-      cargarHorarios(formData.idMedico);
-      const medico = medicos.find(m => m.id === parseInt(formData.idMedico));
-      setMedicoSeleccionado(medico);
+    if (medicoSeleccionado && fechaSeleccionada) {
+      cargarSlots();
+    } else {
+      setSlots([]);
+      setSlotSeleccionado(null);
     }
-  }, [formData.idMedico, medicos]);
+  }, [medicoSeleccionado, fechaSeleccionada]);
 
   const cargarDatos = async () => {
     try {
-      // Cargar médicos
-      const responseMedicos = await api.get('/medicos');
-      setMedicos(responseMedicos.data);
-
-      // Cargar ID del paciente
+      // Obtener ID del paciente
       const responsePacientes = await api.get('/pacientes');
       const paciente = responsePacientes.data.find(p => p.idUsuario === user.id);
+      
       if (paciente) {
-        setIdPaciente(paciente.id);
+        setPacienteId(paciente.id);
       }
+
+      // Obtener médicos
+      const responseMedicos = await api.get('/medicos');
+      setMedicos(responseMedicos.data);
     } catch (error) {
-      console.error('Error al cargar datos:', error);
-    }
-  };
-
-  const cargarHorarios = async (idMedico) => {
-    try {
-      const response = await api.get(`/horarios/medico/${idMedico}`);
-      setHorarios(response.data);
-    } catch (error) {
-      console.error('Error al cargar horarios:', error);
-    }
-  };
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSiguiente = () => {
-    if (paso === 1 && !formData.idMedico) {
-      alert('Por favor selecciona un médico');
-      return;
-    }
-    if (paso === 2 && (!formData.fecha || !formData.idHorario)) {
-      alert('Por favor selecciona fecha y horario');
-      return;
-    }
-    if (paso === 3 && !formData.motivoConsulta) {
-      alert('Por favor describe el motivo de tu consulta');
-      return;
-    }
-    setPaso(paso + 1);
-  };
-
-  const handleAnterior = () => {
-    setPaso(paso - 1);
-  };
-
-  const handleSubmit = async () => {
-    if (!idPaciente) {
-      alert('Error: No se pudo obtener tu información de paciente');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const citaData = {
-        idPaciente: idPaciente,
-        idMedico: parseInt(formData.idMedico),
-        idHorario: parseInt(formData.idHorario),
-        fecha: formData.fecha,
-        motivoConsulta: formData.motivoConsulta,
-      };
-
-      await api.post('/citas', citaData);
-      alert('¡Cita agendada exitosamente!');
-      navigate('/paciente/mis-citas');
-    } catch (error) {
-      console.error('Error al agendar cita:', error);
-      alert('Error al agendar la cita. Por favor intenta de nuevo.');
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Obtener fecha mínima (hoy)
-  const fechaMinima = new Date().toISOString().split('T')[0];
+  const cargarSlots = async () => {
+    setLoadingSlots(true);
+    setErrorSlots('');
+    setSlots([]);
+    setSlotSeleccionado(null);
+
+    try {
+      const response = await api.get('/horarios/slots-disponibles', {
+        params: {
+          idMedico: medicoSeleccionado,
+          fecha: fechaSeleccionada
+        }
+      });
+
+      if (response.data.length === 0) {
+        setErrorSlots('El médico no tiene horarios configurados para este día');
+      } else {
+        setSlots(response.data);
+      }
+    } catch (error) {
+      console.error('Error al cargar slots:', error);
+      setErrorSlots('Error al cargar horarios disponibles');
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!slotSeleccionado) {
+      alert('Por favor selecciona un horario');
+      return;
+    }
+
+    try {
+      // Buscar el horario del médico para el día seleccionado
+      const responseHorarios = await api.get(`/horarios/medico/${medicoSeleccionado}`);
+      const fecha = new Date(fechaSeleccionada + 'T00:00:00');
+      const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+      const diaSemana = diasSemana[fecha.getDay()];
+      
+      const horario = responseHorarios.data.find(h => h.diaSemana === diaSemana);
+      
+      if (!horario) {
+        alert('No se encontró el horario del médico para este día');
+        return;
+      }
+
+      // Crear la cita con el slot seleccionado
+      await api.post('/citas', {
+        idPaciente: pacienteId,
+        idMedico: parseInt(medicoSeleccionado),
+        idHorario: horario.id,
+        fecha: fechaSeleccionada,
+        horaInicio: slotSeleccionado.horaInicio,
+        horaFin: slotSeleccionado.horaFin,
+        motivoConsulta: motivoConsulta
+      });
+
+      alert('¡Cita agendada exitosamente!');
+      navigate('/paciente/mis-citas');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al agendar la cita: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const formatearHora = (hora) => {
+    if (!hora) return '';
+    const [hours, minutes] = hora.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  const getMedicoInfo = () => {
+    if (!medicoSeleccionado) return null;
+    return medicos.find(m => m.id === parseInt(medicoSeleccionado));
+  };
+
+  const getMinDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const medicoInfo = getMedicoInfo();
 
   return (
     <div className="min-h-screen bg-background">
@@ -160,7 +188,7 @@ const AgendarCita = () => {
                   <p className="font-medium text-gray-800">{user.nombre}</p>
                   <p className="text-gray-500">{user.rol}</p>
                 </div>
-                <button onClick={logout} className="text-gray-600 hover:text-red-600" title="Cerrar sesión">
+                <button onClick={logout} className="text-gray-600 hover:text-red-600">
                   <LogOut size={20} />
                 </button>
               </div>
@@ -171,270 +199,205 @@ const AgendarCita = () => {
 
       {/* Contenido Principal */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <Link
-          to="/paciente/dashboard"
-          className="inline-flex items-center text-primary mb-6 hover:underline"
-        >
-          <ArrowLeft className="mr-2" size={20} />
-          Volver al Dashboard
-        </Link>
-
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          Agendar Nueva Cita
-        </h1>
-
-        {/* Indicador de Pasos */}
+        {/* Header con botón volver */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {[1, 2, 3, 4].map((num) => (
-              <div key={num} className="flex items-center flex-1">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                    paso >= num
-                      ? 'bg-primary text-white'
-                      : 'bg-gray-200 text-gray-500'
-                  }`}
-                >
-                  {num}
-                </div>
-                {num < 4 && (
-                  <div
-                    className={`flex-1 h-1 mx-2 ${
-                      paso > num ? 'bg-primary' : 'bg-gray-200'
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-2 text-sm text-gray-600">
-            <span>Médico</span>
-            <span>Fecha/Hora</span>
-            <span>Motivo</span>
-            <span>Confirmar</span>
-          </div>
+          <Link 
+            to="/paciente/dashboard" 
+            className="inline-flex items-center text-primary hover:underline mb-4"
+          >
+            <ChevronLeft size={20} />
+            <span>Volver al inicio</span>
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Agendar Nueva Cita</h1>
+          <p className="text-gray-600">Selecciona médico, fecha y horario disponible</p>
         </div>
 
-        {/* Contenido por Paso */}
-        <div className="card">
-          {/* PASO 1: Seleccionar Médico */}
-          {paso === 1 && (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Selección de médico */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <User className="text-primary" size={24} />
+              <h2 className="text-xl font-semibold text-gray-800">Seleccionar Médico</h2>
+            </div>
+
             <div>
-              <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                <User className="mr-2 text-primary" />
-                Selecciona un Médico
-              </h2>
-              
-              <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Médico *
+              </label>
+              <select
+                value={medicoSeleccionado}
+                onChange={(e) => {
+                  setMedicoSeleccionado(e.target.value);
+                  setSlotSeleccionado(null);
+                }}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Selecciona un médico</option>
                 {medicos.map((medico) => (
-                  <label
-                    key={medico.id}
-                    className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      formData.idMedico === medico.id.toString()
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 hover:border-primary/50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="idMedico"
-                      value={medico.id}
-                      checked={formData.idMedico === medico.id.toString()}
-                      onChange={handleChange}
-                      className="mr-4"
-                    />
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">
-                        Dr. {medico.nombre} {medico.apellido}
-                      </p>
-                      <p className="text-sm text-primary">{medico.especialidad}</p>
-                      {medico.consultorio && (
-                        <p className="text-sm text-gray-500">
-                          Consultorio {medico.consultorio}
-                        </p>
-                      )}
-                    </div>
-                  </label>
+                  <option key={medico.id} value={medico.id}>
+                    Dr. {medico.nombre} {medico.apellido} - {medico.especialidad}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
-          )}
 
-          {/* PASO 2: Seleccionar Fecha y Horario */}
-          {paso === 2 && (
-            <div>
-              <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                <Calendar className="mr-2 text-primary" />
-                Selecciona Fecha y Horario
-              </h2>
-
-              <div className="space-y-6">
-                {/* Fecha */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fecha de la Cita
-                  </label>
-                  <input
-                    type="date"
-                    name="fecha"
-                    value={formData.fecha}
-                    onChange={handleChange}
-                    min={fechaMinima}
-                    className="input-field"
-                    required
-                  />
-                </div>
-
-                {/* Horarios Disponibles */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Horario Disponible
-                  </label>
-                  {horarios.length === 0 ? (
-                    <p className="text-gray-500">
-                      No hay horarios disponibles para este médico
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {horarios.map((horario) => (
-                        <label
-                          key={horario.id}
-                          className={`flex flex-col items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                            formData.idHorario === horario.id.toString()
-                              ? 'border-primary bg-primary/5'
-                              : 'border-gray-200 hover:border-primary/50'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="idHorario"
-                            value={horario.id}
-                            checked={formData.idHorario === horario.id.toString()}
-                            onChange={handleChange}
-                            className="sr-only"
-                          />
-                          <Clock size={20} className="mb-2 text-gray-600" />
-                          <span className="font-medium text-sm">
-                            {horario.diaSemana}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {horario.horaInicio} - {horario.horaFin}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            {medicoInfo && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-gray-700">
+                  <strong>Especialidad:</strong> {medicoInfo.especialidad}
+                </p>
+                {medicoInfo.consultorio && (
+                  <p className="text-sm text-gray-700 mt-1">
+                    <strong>Consultorio:</strong> {medicoInfo.consultorio}
+                  </p>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* PASO 3: Motivo de Consulta */}
-          {paso === 3 && (
-            <div>
-              <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                <FileText className="mr-2 text-primary" />
-                Motivo de Consulta
-              </h2>
+          {/* Selección de fecha */}
+          {medicoSeleccionado && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <Calendar className="text-primary" size={24} />
+                <h2 className="text-xl font-semibold text-gray-800">Seleccionar Fecha</h2>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Describe el motivo de tu consulta
+                  Fecha de la cita *
                 </label>
-                <textarea
-                  name="motivoConsulta"
-                  value={formData.motivoConsulta}
-                  onChange={handleChange}
-                  rows={6}
-                  placeholder="Describe brevemente el motivo de tu visita, síntomas que presentas, o cualquier información que consideres relevante..."
-                  className="input-field"
+                <input
+                  type="date"
+                  value={fechaSeleccionada}
+                  onChange={(e) => {
+                    setFechaSeleccionada(e.target.value);
+                    setSlotSeleccionado(null);
+                  }}
+                  min={getMinDate()}
                   required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
           )}
 
-          {/* PASO 4: Confirmación */}
-          {paso === 4 && (
-            <div>
-              <h2 className="text-2xl font-semibold mb-6 flex items-center">
-                <CheckCircle className="mr-2 text-success" />
-                Confirmar Cita
-              </h2>
-
-              <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Médico</p>
-                  <p className="font-semibold text-gray-800">
-                    Dr. {medicoSeleccionado?.nombre} {medicoSeleccionado?.apellido}
-                  </p>
-                  <p className="text-sm text-primary">
-                    {medicoSeleccionado?.especialidad}
-                  </p>
-                </div>
-
-                <div className="border-t pt-4">
-                  <p className="text-sm text-gray-500 mb-1">Fecha y Hora</p>
-                  <p className="font-semibold text-gray-800">
-                    {new Date(formData.fecha + 'T00:00:00').toLocaleDateString('es-GT', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {horarios.find(h => h.id === parseInt(formData.idHorario))?.horaInicio} - 
-                    {horarios.find(h => h.id === parseInt(formData.idHorario))?.horaFin}
-                  </p>
-                </div>
-
-                <div className="border-t pt-4">
-                  <p className="text-sm text-gray-500 mb-1">Motivo de Consulta</p>
-                  <p className="text-gray-800">{formData.motivoConsulta}</p>
-                </div>
+          {/* Slots disponibles */}
+          {fechaSeleccionada && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <Clock className="text-primary" size={24} />
+                <h2 className="text-xl font-semibold text-gray-800">Horarios Disponibles</h2>
               </div>
 
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Nota:</strong> Recibirás una confirmación de tu cita. 
-                  Por favor, llega 10 minutos antes de tu hora programada.
-                </p>
+              {loadingSlots ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-gray-600 mt-4">Cargando horarios...</p>
+                </div>
+              ) : errorSlots ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start space-x-3">
+                  <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
+                  <p className="text-sm text-yellow-800">{errorSlots}</p>
+                </div>
+              ) : slots.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">Selecciona una fecha para ver horarios disponibles</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {slots.map((slot, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => slot.disponible && setSlotSeleccionado(slot)}
+                      disabled={!slot.disponible}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        slot.disponible
+                          ? slotSeleccionado?.hora === slot.hora
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-gray-200 hover:border-primary hover:bg-primary/5'
+                          : 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <Clock size={18} className={slot.disponible ? '' : 'text-gray-400'} />
+                        {slot.disponible ? (
+                          slotSeleccionado?.hora === slot.hora ? (
+                            <Check size={18} />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border-2 border-current"></div>
+                          )
+                        ) : (
+                          <X size={18} className="text-red-500" />
+                        )}
+                      </div>
+                      <p className="font-semibold text-left">
+                        {formatearHora(slot.horaInicio)}
+                      </p>
+                      <p className="text-sm text-left opacity-80">
+                        {formatearHora(slot.horaFin)}
+                      </p>
+                      <p className="text-xs mt-2 text-left">
+                        {slot.disponible ? 'Disponible' : 'Ocupado'}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {slotSeleccionado && (
+                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    <strong>Horario seleccionado:</strong> {formatearHora(slotSeleccionado.horaInicio)} - {formatearHora(slotSeleccionado.horaFin)}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Motivo de consulta */}
+          {slotSeleccionado && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <AlertCircle className="text-primary" size={24} />
+                <h2 className="text-xl font-semibold text-gray-800">Motivo de Consulta</h2>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Describe brevemente el motivo de tu consulta (opcional)
+                </label>
+                <textarea
+                  value={motivoConsulta}
+                  onChange={(e) => setMotivoConsulta(e.target.value)}
+                  rows="4"
+                  placeholder="Ejemplo: Control de presión arterial, dolor de cabeza, etc."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                />
               </div>
             </div>
           )}
 
-          {/* Botones de Navegación */}
-          <div className="flex justify-between mt-8 pt-6 border-t">
-            {paso > 1 && (
-              <button
-                onClick={handleAnterior}
-                className="btn-outline"
-                disabled={loading}
-              >
-                Anterior
-              </button>
-            )}
-
-            {paso < 4 ? (
-              <button
-                onClick={handleSiguiente}
-                className="btn-primary ml-auto"
-              >
-                Siguiente
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                className="btn-success ml-auto"
-                disabled={loading}
-              >
-                {loading ? 'Agendando...' : 'Confirmar Cita'}
-              </button>
-            )}
+          {/* Botones de acción */}
+          <div className="flex space-x-4">
+            <Link
+              to="/paciente/dashboard"
+              className="flex-1 btn-outline"
+            >
+              Cancelar
+            </Link>
+            <button
+              type="submit"
+              disabled={!slotSeleccionado}
+              className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Confirmar Cita
+            </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

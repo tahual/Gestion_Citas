@@ -177,6 +177,7 @@ const RecepcionistaMedicos = () => {
               <Link to="/recepcionista/dashboard" className="text-gray-600 hover:text-gray-900">Inicio</Link>
               <Link to="/recepcionista/citas" className="text-gray-600 hover:text-gray-900">Citas</Link>
               <Link to="/recepcionista/medicos" className="text-primary font-medium">Médicos</Link>
+              <Link to="/recepcionista/horarios" className="text-gray-600 hover:text-gray-900">Horarios</Link>
               <Link to="/recepcionista/pacientes" className="text-gray-600 hover:text-gray-900">Pacientes</Link>
               <div className="border-l pl-6 flex items-center space-x-4">
                 <div className="text-sm">

@@ -1,4 +1,4 @@
-// src/App.jsx - ACTUALIZADO CON RUTA DE PACIENTE DETALLE
+// src/App.jsx - CON RUTA DE HORARIOS
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
@@ -18,13 +18,14 @@ import MedicoDashboard from './pages/medico/Dashboard';
 import MedicoCitas from './pages/medico/Citas';
 import CitaDetalle from './pages/medico/CitaDetalle';
 import MedicoPacientes from './pages/medico/Pacientes';
-import PacienteDetalle from './pages/medico/PacienteDetalle'; // ← NUEVO
+import PacienteDetalle from './pages/medico/PacienteDetalle';
 import MedicoHistorial from './pages/medico/Historial';
 
 // Páginas de Recepcionista
 import RecepcionistaDashboard from './pages/recepcionista/Dashboard';
 import RecepcionistaCitas from './pages/recepcionista/Citas';
 import RecepcionistaMedicos from './pages/recepcionista/Medicos';
+import RecepcionistaHorarios from './pages/recepcionista/Horarios'; // ← NUEVO
 import RecepcionistaPacientes from './pages/recepcionista/Pacientes';
 
 function App() {
@@ -103,7 +104,6 @@ function App() {
               </PrivateRoute>
             }
           />
-          {/* NUEVA RUTA - Detalle del paciente */}
           <Route
             path="/medico/pacientes/:id"
             element={
@@ -143,6 +143,15 @@ function App() {
             element={
               <PrivateRoute allowedRoles={['Recepcionista']}>
                 <RecepcionistaMedicos />
+              </PrivateRoute>
+            }
+          />
+          {/* NUEVA RUTA - Horarios */}
+          <Route
+            path="/recepcionista/horarios"
+            element={
+              <PrivateRoute allowedRoles={['Recepcionista']}>
+                <RecepcionistaHorarios />
               </PrivateRoute>
             }
           />

@@ -119,6 +119,9 @@ const RecepcionistaDashboard = () => {
               <Link to="/recepcionista/medicos" className="text-gray-600 hover:text-gray-900">
                 Médicos
               </Link>
+              <Link to="/recepcionista/horarios" className="text-gray-600 hover:text-gray-900">
+              Horarios
+              </Link>
               <Link to="/recepcionista/pacientes" className="text-gray-600 hover:text-gray-900">
                 Pacientes
               </Link>

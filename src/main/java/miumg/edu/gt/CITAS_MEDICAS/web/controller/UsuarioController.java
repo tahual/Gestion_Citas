@@ -1,9 +1,12 @@
+// src/main/java/miumg/edu/gt/CITAS_MEDICAS/web/controller/UsuarioController.java
+// ACTUALIZADO CON POST /api/usuarios
 package miumg.edu.gt.CITAS_MEDICAS.web.controller;
 
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
 import miumg.edu.gt.CITAS_MEDICAS.domain.entity.Usuario;
+import miumg.edu.gt.CITAS_MEDICAS.domain.enums.TipoUsuario;
 import miumg.edu.gt.CITAS_MEDICAS.repository.UsuarioRepository;
 import miumg.edu.gt.CITAS_MEDICAS.service.UsuarioService;
 import miumg.edu.gt.CITAS_MEDICAS.web.dto.request.UsuarioRegistroRequest;
@@ -29,7 +32,34 @@ public class UsuarioController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // CREATE
+    // CREATE - NUEVO ENDPOINT (para recepcionista)
+    @PostMapping
+    public ResponseEntity<UsuarioResponse> crear(@RequestBody CreateUsuarioRequest request) {
+        try {
+            Usuario usuario = new Usuario();
+            usuario.setNombre(request.getNombre());
+            usuario.setApellido(request.getApellido());
+            usuario.setCorreo(request.getCorreo());
+            usuario.setTelefono(request.getTelefono());
+            usuario.setPassword(passwordEncoder.encode(request.getPassword()));
+            
+            // Convertir string "Paciente" a enum
+            TipoUsuario tipoUsuario;
+            if (request.getRol() != null) {
+                tipoUsuario = TipoUsuario.valueOf(request.getRol());
+            } else {
+                tipoUsuario = TipoUsuario.Paciente; // Default
+            }
+            usuario.setTipoUsuario(tipoUsuario);
+
+            Usuario guardado = usuarioService.crear(usuario);
+            return ResponseEntity.status(HttpStatus.CREATED).body(convertirAUsuarioResponse(guardado));
+        } catch (Exception e) {
+            throw new RuntimeException("Error al crear usuario: " + e.getMessage(), e);
+        }
+    }
+
+    // CREATE - Endpoint de registro (mantener por compatibilidad)
     @PostMapping("/registro")
     public ResponseEntity<UsuarioResponse> registrar(@Valid @RequestBody UsuarioRegistroRequest request) {
         Usuario usuario = new Usuario();
@@ -108,5 +138,34 @@ public class UsuarioController {
         response.setTelefono(usuario.getTelefono());
         response.setTipoUsuario(usuario.getTipoUsuario());
         return response;
+    }
+    
+    // DTO interno para el nuevo endpoint
+    public static class CreateUsuarioRequest {
+        private String nombre;
+        private String apellido;
+        private String correo;
+        private String telefono;
+        private String password;
+        private String rol; // "Paciente", "Medico", "Recepcionista"
+        
+        // Getters y Setters
+        public String getNombre() { return nombre; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
+        
+        public String getApellido() { return apellido; }
+        public void setApellido(String apellido) { this.apellido = apellido; }
+        
+        public String getCorreo() { return correo; }
+        public void setCorreo(String correo) { this.correo = correo; }
+        
+        public String getTelefono() { return telefono; }
+        public void setTelefono(String telefono) { this.telefono = telefono; }
+        
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+        
+        public String getRol() { return rol; }
+        public void setRol(String rol) { this.rol = rol; }
     }
 }

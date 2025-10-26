@@ -1,3 +1,5 @@
+// src/main/java/miumg/edu/gt/CITAS_MEDICAS/domain/entity/Paciente.java
+// ACTUALIZADO CON telefono y correo
 package miumg.edu.gt.CITAS_MEDICAS.domain.entity;
 
 import jakarta.persistence.Column;
@@ -30,9 +32,15 @@ public class Paciente {
     @Column(name = "documento_identidad", length = 50)
     private String documentoIdentidad;
     
-    // CORREGIDO: nombre de variable en camelCase
     @Column(name = "fecha_nacimiento")
-    private LocalDate fechaNacimiento;  // ← CAMBIO AQUÍ
+    private LocalDate fechaNacimiento;
+    
+    // NUEVO: Teléfono y correo propios del paciente
+    @Column(name = "telefono", length = 20)
+    private String telefono;
+    
+    @Column(name = "correo", length = 100)
+    private String correo;
     
     @Column(length = 150)
     private String direccion;
@@ -80,13 +88,29 @@ public class Paciente {
         this.documentoIdentidad = documentoIdentidad; 
     }
     
-    // CORREGIDO: getter y setter con camelCase
-    public LocalDate getFechaNacimiento() {  // ← CAMBIO AQUÍ
+    public LocalDate getFechaNacimiento() {
         return fechaNacimiento; 
     }
     
-    public void setFechaNacimiento(LocalDate fechaNacimiento) {  // ← CAMBIO AQUÍ
+    public void setFechaNacimiento(LocalDate fechaNacimiento) {
         this.fechaNacimiento = fechaNacimiento; 
+    }
+    
+    // NUEVO
+    public String getTelefono() {
+        return telefono;
+    }
+    
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+    
+    public String getCorreo() {
+        return correo;
+    }
+    
+    public void setCorreo(String correo) {
+        this.correo = correo;
     }
     
     public String getDireccion() { 
